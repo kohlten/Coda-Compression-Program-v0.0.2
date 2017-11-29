@@ -30,7 +30,7 @@ Meant to be used alongside a download to extract the files.
 __________________________________________________________________
 *  Syntax:
 *      extract -name name -decrypt -key -iv
-*  All options are optional as long as the file is named out.
+*  All options are optional as long as the file is in the current directory.
 *  name = The name of the compressed file to extract, if not specified will try to find one
 *  -decrypt = Use this option if the compressed file is encrypted
 *      -key = The key for the encrypted files
