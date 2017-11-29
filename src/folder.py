@@ -31,8 +31,8 @@ for file in files:
         del files[files.index(file)]
     else:
         files_with_path.append(argv[1] + file)
-    #f " " in file:
-        #files[files.index(file)] = '"' + file + '"'
+    if " " in file:
+        files[files.index(file)] = '"' + file + '"'
 
 for i in range(len(files_with_path)):
     copy(files_with_path[i], os.getcwd())
@@ -48,40 +48,30 @@ files_str = ",".join(files)
 if len(argv) >= 3:
     encrypt = argv[2].split("=")[1]
     if encrypt.lower() == "true":
-        encrypt = True
+        encrypt = "-encrypt"
     else:
-        encrypt = False
+        encrypt = ""
 else:
     logging.info(help)
     logging.info("ERROR 2: Encryption bool not found!")
     exit(1)
 if len(argv) >= 4:
-    name = argv[3].split("=")[1]
+    name = "-name " + argv[3].split("=")[1]
 else:
     loging.info(help)
     logging.info("ERROR 3: Name not found!")
     exit(1)
 
 if len(argv) >= 5:
-    key = argv[4].split("=")[1]
+    key = "-key " + argv[4].split("=")[1]
 else:
     key = ""
 if len(argv) >= 6:
-    iv = argv[5].split("=")[1]
+    iv = "-iv " + argv[5].split("=")[1]
 else:
     iv = ""
 
-if encrypt:
-    if key != "" and iv == "":
-        call('coda -files ' + "'" + files_str + "'" + " -compress -encrypt -name " + name + " -key " + key)
-    elif iv != "" and key == "":
-        call('coda -files ' + files_str + " -compress -encrypt -name " + name + " -iv " + iv)
-    elif key != "" and iv != "":
-        call('coda -files ' + files_str + " -compress -encrypt -name " + name + " -iv " + iv + " -key " + key)
-    else:
-        call('coda -files ' + files_str + " -compress -encrypt -name " + name)
-else:
-    call("coda -files " + "'" + files_str + "'" + " -compress -name " + name)
+call('coda -files ' + files_str  + " -compress " + encrypt + " " + key + " " + iv + " " + name)
 
 for i in range(len(files)):
     os.remove(files[i])
