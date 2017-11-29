@@ -1,19 +1,15 @@
 from Crypto.Cipher import AES
 from random import choice
 
+choices = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
+
 
 def get_key(length):
-    # # Create a random key
-    choices = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
-    string = ""
-
     if length not in [16, 24, 32]:
         raise ValueError, "Number must be 16, 24, or 32"
 
-    for i in range(length):
-        string += choice(choices)
-
-    return string
+    # # Create a random key
+    return "".join([choice(choices) for _ in range(length)])
 
 
 def encrypt(key, text, iv):
@@ -26,10 +22,10 @@ def encrypt(key, text, iv):
 
     # # Check if the key and iv is valid
     if len(key) not in [16, 24, 32]:
-        raise ValueError, "Key must be 16, 24, or 32 characters long!"
+        raise ValueError("Key must be 16, 24, or 32 characters long!")
 
     if len(iv) not in [16, 24, 32]:
-        raise ValueError, "Iv must be 16, 24, or 32 characters long!"
+        raise ValueError("Iv must be 16, 24, or 32 characters long!")
 
     # # If the length of the text is not a multiple of 16
     # # Add zeros until it is.
@@ -54,10 +50,10 @@ def encrypt(key, text, iv):
 def decrypt(key, text, iv):
     # # Check the key and iv are correct
     if len(key) not in [16, 24, 32]:
-        raise ValueError, "Key must be 16, 24, or 32 characters long!"
+        raise ValueError("Key must be 16, 24, or 32 characters long!")
 
     if len(iv) not in [16, 24, 32]:
-        raise ValueError, "Iv must be 16, 24, or 32 characters long!"
+        raise ValueError("Iv must be 16, 24, or 32 characters long!")
 
     # # If the length of the text is not a multiple of 16
     # # Add zeros until it is

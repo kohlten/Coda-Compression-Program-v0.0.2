@@ -1,14 +1,10 @@
-import compress
+from time import sleep, time
 import sys, os
-from zlib import decompress as decomp, compress as comp
-from zlib import error as zliberror
-from zlib import MAX_WBITS
 from encrypt import *
-from time import sleep
+import compress, pylzma
+import cPickle
 
-'''TO DO
-'''
-
+start_time = time()
 # # Get the args from the command line
 args = sys.argv[1:]
 
@@ -21,17 +17,21 @@ Can also encrypt the data in the file with a key and iv.
 
 Commands:
     -help       Display this message.
-    -files      Files to be compressed / file that needs to be decompressed.
+    -files      Files to be compressed. For decompression, Coda will try to find the .coda file in the current folder.
     -compress   Compress the files inputted.
         -name       Name for the compressed file to be named. Will default to out if unspecified.
     -decompress Decompress the file inputted.
     -encrypt    Encrypt the files to be compressed. You Should not use this with the decompress option.
-        -key        They key to be used to encrypt, If you dont use this option, one will be provided for you.\n If you lose the key you cannot decompress.
+        -key        The key to be used to encrypt, If you dont use this option, one will be provided for you. If you lose the key you cannot decompress.
+        -iv         The iv used to encrypt, If you dont use this option, a random one will be provided for you. If you lose the iv you cannot decompress.
+        -key_len    The length of the key and iv to be provided. Must be 16, 24, or 32. Only use this option if not providing a key.
     -decrypt    Decrypt the file using a key and an iv. They should be provided.
         -key        The key to be used to decrypt. Required.
         -iv         The iv to be used to decrypt. Required.'
         
-    Your key and iv must either be 16, 24, or 32 characters long. Anything else will result in an error.'''
+    Your key and iv must either be 16, 24, or 32 characters long. Anything else will result in an error.
+    It is also not reccomended to use the same key and iv. It can result in errors.
+    Encryption can cause a small loss of data rarely. Be warned. I am not to blame for any lost files.'''
 
 
 def split_file(files, lengths):
@@ -43,39 +43,28 @@ def split_file(files, lengths):
 
     return strings
 
-if __name__ == '__main__':
-    # # Display the help menu
+accepted_values = ["-compress", "-decompress", "-help", "-files", "-name", "-key", "-iv", "-key_len", "-encrypt", "-decrypt", "-file"]
+
+
+def check_for_args():
     if "-help" in args:
         print(help)
         sys.exit(0)
-
-    # # Getting the files/file to compress
-    if "-files" in args or "-file" in args:
-        if "-file" in args:
-            args[args.index("-file")] = "-files"
-        string = args[args.index("-files") + 1].split(",")
-        files = []
-        names = []
-        for file in string:
-            file = open(file, 'rb')
-            names.append(file.name)
-            files.append(file.read())
-            file.close()
-    else:
-        print(help)
-        raise ValueError, "At least one file is required"
-
-    # # Check for correct arguments
+    for arg in args:
+        if ("-" == arg[0] and arg not in accepted_values) or ("-files" not in args and "-name" not in args and arg not in accepted_values):
+            print(help)
+            print("Error -1: " + arg + " is not a recognized value!")
+            sys.exit(1)
     if "-encrypt" in args and "-decompress" in args:
         print(help)
-        raise ValueError, "Cannot encrypt a file to be decompressed"
+        raise ValueError("Cannot encrypt a file to be decompressed")
     if "-decrypt" in args and "-compress" in args:
         print(help)
-        raise ValueError, "Cannot decrypt a file to be compressed"
+        raise ValueError("Cannot decrypt a file to be compressed")
 
     if "-compress" in args and "-decompress" in args:
         print(help)
-        raise ValueError, "Cannot both decompress and compress"
+        raise ValueError("Cannot both decompress and compress")
 
     if "-compress" not in args and "-decompress" not in args:
         print("What do you want me to do? I cant do anything with those arguments!")
@@ -83,93 +72,137 @@ if __name__ == '__main__':
         print(help)
         sys.exit(1)
 
-    # # Make an info file with the name and folder data, and compress the text from the files.
-    # # Can also optionally encrypt the text
-    if "-compress" in args:
-        print("Compressing...")
-        files, names, lengths = compress.compress(files, names)
 
-        info = open("info", "wb")
+def get_files():
+    files = []
+    names = []
+    if "-files" in args:
+        string = args[args.index("-files") + 1].split(",")
 
-        text = comp(str(names) + ":" + str(lengths))
-        #text = str(names) + ":" + str(lengths)
-        info.write(text)
-        info.close()
-
-        # # Encrypt the text
-        # # If -key in args use that key instead of a random one
-        if "-encrypt" in args:
-            print("Encrypting...")
-            if "-key" in args:
-                key = args[args.index("-key") + 1]
-            else:
-                key = get_key(16)
-
-            iv = get_key(16)
-
-            names = names.split(",")
-            for i in range(len(files)):
-                print(names[i] + " is encrypted!")
-                files[i], key, iv = encrypt(key, files[i], iv)
-            print("Your key is: " + str(key) + " Your iv is: " + str(iv))
-            print("Encryption done")
-
-        if "-name" in args:
-            out = open(args[args.index("-name") + 1], 'wb')
-            for i in range(len(files)):
-                out.write(files[i])
+        if "-compress" in args:
+            for file in string:
+                file = open(file, 'rb')
+                names.append(file.name)
+                files.append(file.read())
+                file.close()
         else:
-            out = open("out", "wb")
-            for i in range(len(files)):
-                out.write(files[i])
+            raise ValueError("ERROR 1: Only use this this option for compression. Or -compression not found in args.")
+    elif "-name" not in args and "-files" not in args:
+        string = []
+        for file_name in os.listdir(os.getcwd()):
+            if len(file_name.split(".")) > 1 and file_name.split(".")[1] == "coda":
+                print("Found! " + file_name)
+                string.append(file_name)
+                break
+        if len(string) > 0:
+            files = open(string[0], 'rb')
+            names.append(files.name)
+        else:
+            print(help)
+            raise ValueError("ERROR -2: Could not find a coda file! " + ' '.join(os.listdir(os.getcwd())))
+    elif "-files" not in args:
+        files = open(args[args.index("-name") + 1], 'rb')
+        names.append(files.name)
+    else:
+        raise ValueError("Error -1: No files specifed!")
 
-        out.close()
-        print("Completed with no errors!")
+    return files, names
+
+
+def compress_files(files, names):
+    print("Compressing...")
+    files, names = compress.compress(files, names)
+
+    # # Encrypt the text
+    # # If -key in args use that key instead of a random one
+    names = names.split(',')
+    if "-encrypt" in args:
+        print("Encrypting...")
+        if "-key_len" in args:
+            key_len = int(args[args.index("-key_len") + 1])
+        else:
+            key_len = 16
+        if "-key" in args:
+            key = args[args.index("-key") + 1]
+        else:
+            key = get_key(key_len)
+        if "-iv" in args:
+            iv = args[args.index("-iv") + 1]
+        else:
+            iv = get_key(key_len)
+
+        for i in range(len(files)):
+            print(names[i] + " is encrypted!")
+            files[i], key, iv = encrypt(key, files[i], iv)
+        for i in range(len(names)):
+            names[i], key, iv = encrypt(key, names[i], iv)
+        print("Your key is: " + str(key) + " Your iv is: " + str(iv))
+        print("Encryption done")
+
+    # #Dump the files into a pickle file
+    if "-name" in args:
+        out = open(args[args.index("-name") + 1] + ".coda", 'wb')
+    else:
+        out = open("out" + ".coda", "wb")
+
+    arrays = [files, [pylzma.compress(','.join(names))]]
+    cPickle.dump(arrays, out, protocol=2)
+
+    out.close()
+    print("Completed with no errors!")
+
+
+def decompress_file(files):
+    pickle_in = cPickle.load(files)
+    names = pylzma.decompress(pickle_in[1][0]).split(",")
+    files = pickle_in[0]
+
+    if "-decrypt" in args:
+        print("Decrypting..")
+
+        if "-iv" in args and "-key" in args:
+            iv = args[args.index("-iv") + 1]
+            key = args[args.index("-key") + 1]
+        else:
+            raise ValueError("Cannot decrypt without a key and iv")
+        for i in range(len(names)):
+            names[i], key, iv = decrypt(key, names[i], iv)
+        for i in range(len(files)):
+            files[i], key, iv = decrypt(key, files[i], iv)
+            print(names[i] + " is decrypted!")
+
+        print("Decrypted")
+
+    print("Decompressing...")
+    try:
+        for i in range(len(files)):
+            files[i] = pylzma.decompress(files[i])
+            print(names[i] + " is decompressed!")
+    except:
+        raise Exception("Unable to decompress. Are you sure it isnt encrypted?")
+
+    for i in range(len(names)):
+        file = open(names[i], "wb")
+        file.write(files[i])
+        file.close()
+
+if __name__ == '__main__':
+    # # Check for correct arguments
+    print(args)
+    check_for_args()
+
+    # # Getting the files/file to compress
+    files, names = get_files()
+
+    # # Take the files and compress them. If -encrypt in args, encrypt them with a key and iv.
+    # # Info of the files will also be stored.
+    if "-compress" in args:
+        compress_files(files, names)
 
     # # Decompress the text and put them into their files.
     # # If needed to decrypt, a key and iv is needed.
     elif "-decompress" in args:
-        try:
-            info = open("info", "rb").read()
-            info = decomp(info, MAX_WBITS|32)
-            info = info.split(":")
-            names = info[0].split(",")
-            lengths = info[1].split(",")
-        except zliberror:
-            print(help)
-            raise ValueError, "Incorrect info file, please recompress or contact the software owner."
+        decompress_file(files)
 
-        if "-decrypt" in args:
-            print("Decrypting..")
-            files = split_file(files[0], lengths)
-            if "" in files:
-                del files[files.index("")]
-
-            if "-iv" in args and "-key" in args:
-                iv = args[args.index("-iv") + 1]
-                key = args[args.index("-key") + 1]
-            else:
-                raise ValueError, "Cannot decrypt without a key and iv"
-            for i in range(len(files)):
-                files[i], key, iv = decrypt(key, files[i], iv)
-                print(names[i] + " is decrypted!")
-
-            print("Decrypted")
-
-        else:
-            if len(names) > 1:
-                print("Split")
-                files = split_file(files[0], lengths)
-
-        print("Decompressing...")
-        print(len(files[0]))
-        for i in range(len(files)):
-            files[i] = decomp(files[i], MAX_WBITS|32)
-            print(names[i] + " is decompressed!")
-
-        for i in range(len(names)):
-            file = open(names[i], "wb")
-            file.write(files[i])
-            file.close()
-
-        print("Done with no errors!")
+    print("Done with no errors!")
+    print("Took " + str(time() - start_time) + " Seconds!")
