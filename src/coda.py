@@ -51,7 +51,7 @@ def check_for_args():
         print(help)
         sys.exit(0)
     for arg in args:
-        if ("-" == arg[0] and arg not in accepted_values) or ("-files" not in args and "-name" not in args and arg not in accepted_values):
+        if ("-" == arg[0] and arg not in accepted_values): #or ("-files" not in args and "-name" not in args and arg not in accepted_values):
             print(help)
             print("Error -1: " + arg + " is not a recognized value!")
             sys.exit(1)
@@ -146,7 +146,7 @@ def compress_files(files, names):
         out = open("out" + ".coda", "wb")
 
     arrays = [files, [pylzma.compress(','.join(names))]]
-    cPickle.dump(arrays, out, protocol=2)
+    cPickle.dump(arrays, out, protocol)
 
     out.close()
     print("Completed with no errors!")
@@ -188,7 +188,6 @@ def decompress_file(files):
 
 if __name__ == '__main__':
     # # Check for correct arguments
-    print(args)
     check_for_args()
 
     # # Getting the files/file to compress
