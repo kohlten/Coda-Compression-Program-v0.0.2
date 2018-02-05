@@ -22,10 +22,10 @@ def encrypt(key, text, iv):
 
     # # Check if the key and iv is valid
     if len(key) not in [16, 24, 32]:
-        raise ValueError("Key must be 16, 24, or 32 characters long!")
+        raise ValueError("Key must be 16, 24, or 32 characters long! I got " + str(len(key)) + " characters")
 
     if len(iv) not in [16, 24, 32]:
-        raise ValueError("Iv must be 16, 24, or 32 characters long!")
+        raise ValueError("Iv must be 16, 24, or 32 characters long! I got " + str(len(iv)) + " characters.")
 
     # # If the length of the text is not a multiple of 16
     # # Add zeros until it is.
@@ -71,6 +71,3 @@ def decrypt(key, text, iv):
         out = out[0:len(out) - characters]
 
     return out, key, iv
-
-
-
