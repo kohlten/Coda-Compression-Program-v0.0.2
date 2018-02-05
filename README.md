@@ -1,5 +1,7 @@
 # Coda Compression Program v0.0.2
 
+To compile into binaries, simply run make in the src folder!
+
 Self-Extractor
 Made by: Alex Strole on 11/9/2017
 -----------------------------------------------------------------------------------------------------------
