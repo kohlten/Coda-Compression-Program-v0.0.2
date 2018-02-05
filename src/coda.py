@@ -146,7 +146,7 @@ def compress_files(files, names):
         out = open("out" + ".coda", "wb")
 
     arrays = [files, [pylzma.compress(','.join(names))]]
-    cPickle.dump(arrays, out, protocol)
+    cPickle.dump(arrays, out, protocol=2)
 
     out.close()
     print("Completed with no errors!")
