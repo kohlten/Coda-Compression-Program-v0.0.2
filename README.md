@@ -1,5 +1,6 @@
 # Coda Compression Program v0.0.2
-
+***WARNING**
+This program is outdated and is no longer being updated. To see a updated version, please see my Coda repository.
 Self-Extractor
 Made by: Alex Strole on 11/9/2017
 -----------------------------------------------------------------------------------------------------------
